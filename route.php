@@ -48,12 +48,12 @@ $query = pg_query($dbcon,$start_LineQuery) or die(pg_last_error()); ;
 if (!$query) {
     echo "An error occurred in start_Line\n";
 }else{
-  echo "Achamos ponto 1 \n";
+  //echo "Achamos ponto 1 \n";
   $arr = pg_fetch_array($query, 0, PGSQL_BOTH);
  // var_dump($arr);
   // echo $arr["id"] . " <- Row 1 Author\n";
   $start_Line = $arr[0];
-  echo "id: " . $start_Line . "\n";
+  //echo "id: " . $start_Line . "\n";
   
 }
 
@@ -66,12 +66,12 @@ $query = pg_query($dbcon,$end_LineQuery) or die(pg_last_error());
 if (!$query) {
     echo "An error occurred in end_Line\n";
 }else{
-  echo "Achamos ponto 2 \n";
+  //echo "Achamos ponto 2 \n";
   $arr = pg_fetch_array($query, 0, PGSQL_BOTH);
  // var_dump($arr);
   // echo $arr["id"] . " <- Row 1 Author\n";
   $end_Line = $arr[0];
-  echo "id: " . $end_Line . "\n";
+  //echo "id: " . $end_Line . "\n";
   
 }
 
@@ -96,69 +96,55 @@ if (true){
     if (!$runSQL) {
         echo "An error occurred in creating routing table\n";
     } else{
-        echo "Criou tabela com rota";
+        //echo "Criou tabela com rota \n";
         $sql2 = "
-            SELECT *, ST_AsGeoJSON(the_geom) as geojson, ST_Length(the_geom) as length  FROM AstarResult;";
+            SELECT *, ST_AsGeoJSON(the_geom) as geojson  FROM AstarResult;";
         $runSQL2 = pg_query($dbcon,$sql2) or die(pg_last_error());
         if (!$runSQL2) {
             echo "An error occurred in fetching routing table\n";
-        }else{
+        }/*else{
             while ($row = pg_fetch_row($runSQL2)) {
-                echo "Author: ".$row[0]."  ";
-                var_dump($row);
-                echo "<br />\n";
+              foreach($row as $i => $attr){
+                echo $attr.", ";
+              }
+              echo ";";
             }
-        }
+        }*/
         
     }
 }
 
-
-
-//Mudar dps...
-$sql2 = "SELECT * FROM toronto_roads A where  id = 1";
-   // Perform database query
-   $query = pg_query($dbcon,$sql2); 
- if (!$query) {
-    echo "An error occurred in query run time\n";
-  }
-
-
-
-
-
    // Return route as GeoJSON
    $geojson = array(
       'type'      => 'FeatureCollection',
-      'features'  => array()
+      'features'  => []
    ); 
-  
+   // echo "Antes do while";
    // Add edges to GeoJSON array
-   while($edge=pg_fetch_array($runSQL2, 0, PGSQL_BOTH)) {  
-
+   while($edge=pg_fetch_assoc($runSQL2) ) {  
       $feature = array(
          'type' => 'Feature',
          'geometry' => json_decode($edge['geojson'], true),
-         'crs' => array(
-            'type' => 'EPSG',
-            'properties' => array('code' => PROJ)
-         ),
+         
          'properties' => array(
-            'id' => $edge['id'],
-            'length' => $edge['length']
+            'id' => $edge['id']
          )
       );
-      
+
+      //echo ($feature['type']. "oi");
       // Add feature array to feature collection array
+      //$geojson['features'] = $feature;
       array_push($geojson['features'], $feature);
    }
 
-	
+	//echo "\nDepois do loop" ;
+  //var_dump( $geojson );
    // Close database connection
    pg_close($dbcon);
-
+   //var_dump($geojson['features']);
    // Return routing result
-   header('Content-type: application/json',true);
+   //header('Content-type: application/json',true);
+   //var_dump($geojson);
    echo json_encode($geojson);
    
 

@@ -14,7 +14,7 @@
 <script src="DrawPoints.js" type="text/javascript"></script>
 
 <script type="text/javascript">
-
+    var map, layer, route_layer;
      // global projection objects (uses the proj4js lib)
      var epsg_4326 = new OpenLayers.Projection("EPSG:4326"),
          epsg_900913 = new OpenLayers.Projection("EPSG:900913");
@@ -56,15 +56,72 @@
             },
             success: function(data){
                 console.log("Ajudao mlk ta doente");
+                //console.log(data);
+                addDataMap(data);
             }
         });
     }
 
+    function addDataMap(data){
+        //Erase last layer
+
+        var geojson = {
+            "type": "FeatureCollection",
+            "features": []
+        };
+
+        var dataArray = data.split(", ;");
+        dataArray.pop();
+        console.log ("Entrei em addDataMap");
+        //console.log(dataArray);
+
+        dataArray.forEach(function(d){
+            d = d.split(", "); //split the data up into individual attribute values and the geometry
+            fields = d;
+            //feature object container
+            var feature = {
+                "type": "Feature", 
+                "properties": {}, //properties object container
+                "geometry": (d[2])
+            };
+
+            for (var i=0; i< 1; i++){
+                feature.properties[d[i]] = d[i];
+            };
+
+            //add feature names to autocomplete list
+            /*if ($.inArray(feature.properties.featname, autocomplete) == -1){
+                autocomplete.push(feature.properties.featname);
+            };*/
+
+            geojson.features.push(feature);
+
+
+        });
+
+        console.log(geojson);
+
+        var geojson_format = new OpenLayers.Format.GeoJSON({
+        'internalProjection': new OpenLayers.Projection("EPSG:900913"),
+        'externalProjection': new OpenLayers.Projection("EPSG:4326")
+        });
+        route_layer.addFeatures(geojson_format.read(geojson)); 
+        //activate autocomplete on featname input
+        //$("input[name=featname]").autocomplete({source:autocomplete});
+    }
+
     Ext.onReady(function() {
         // create the map panel
-        var map, layer;
+        
 
-        map = new OpenLayers.Map( 'map');
+        map = new OpenLayers.Map( 'map', {  
+            controls: [
+                new OpenLayers.Control.Navigation(),
+                new OpenLayers.Control.KeyboardDefaults(),
+                new OpenLayers.Control.PanZoomBar(),
+                new OpenLayers.Control.Scale(),
+                new OpenLayers.Control.Attribution()
+            ]});
         layer = new OpenLayers.Layer.OSM( "Simple OSM Map");//, {isBaseLayer: true, projection: 'EPSG:900913'};
         map.addLayer(layer);
         map.setCenter(
@@ -78,13 +135,15 @@
         map.addControl(mp);
 
         // create the layer where the route will be drawn
-        var route_layer = new OpenLayers.Layer.Vector("route", {
+        route_layer = new OpenLayers.Layer.Vector("route", {
             styleMap: new OpenLayers.StyleMap(new OpenLayers.Style({
                 strokeColor: "#ff3333",
                 strokeOpacity: 0.7,
                 strokeWidth: 3
             }))
         });
+
+
 
         // create the layer where the start and final points will be drawn
         var points_layer = new OpenLayers.Layer.Vector("points", {
@@ -122,10 +181,21 @@
         });
 
         // when a point is moved, call the pgrouting function
-        drag_points.onComplete = function() {
-              //pgrouting(store, points_layer, 'GET');
+drag_points.onComplete = function() {
+            pgrouting(store, points_layer, 'GET');
               console.log("vou chamar getData");
               getData(points_layer);
+
+              var vector = new OpenLayers.Layer.Vector("GeoJSON", {
+    projection: "EPSG:4326",
+    strategies: [new OpenLayers.Strategy.Fixed()],
+    protocol: new OpenLayers.Protocol.HTTP({
+        url: "route.php",
+        format: new OpenLayers.Format.GeoJSON()
+    })
+    });
+              map.addLayers(vector);
+
         };
 
         // add the controls to the map
