@@ -12,6 +12,10 @@ include('config.inc.php');
    $end = split(' ',$_REQUEST['finalpoint']);
    $endPoint = array($end[0], $end[1]);
 
+  $metodo = split(' ',$_REQUEST['method']);
+  $algoritmo = $metodo[0];
+
+
 
 
 $sql = "
@@ -76,7 +80,7 @@ if (!$query) {
 }
 
 
-if (true){
+if ($algoritmo == 1){
   $sql = "
    DROP VIEW IF EXISTS \"path\" CASCADE;
   CREATE VIEW \"path\" as
@@ -113,6 +117,48 @@ if (true){
         
     }
 }
+
+
+if ($algoritmo == 2){
+  $sql = "
+   DROP VIEW IF EXISTS \"path\" CASCADE;
+  CREATE VIEW \"path\" as
+  SELECT * FROM   pgr_dijkstra('SELECT id, source, target, cost, x1, y1, x2, y2 FROM toronto_roads', ".$start_Line. ", ".$end_Line.", true, false);
+
+  DROP VIEW IF EXISTS Interm CASCADE;
+  CREATE VIEW Interm AS
+  select A.seq as seq, A.id1 as geomId1, B.id1 as geomId2
+  FROM \"path\" A ,  \"path\" B WHERE (A.seq+1)  =  B.seq ;
+
+  DROP TABLE IF EXISTS dijkstraResult;
+  CREATE TABLE dijkstraResult as 
+  SELECT B.id as id, ST_MakeLine(B.the_geom, C.the_geom) as the_geom
+  FROM Interm A join toronto_roads_vertices_pgr B on A.geomId1 = B.id join toronto_roads_vertices_pgr C on A.geomId2 = C.id;  ";
+ 
+    $runSQL = pg_query($dbcon,$sql) or die(pg_last_error());
+    if (!$runSQL) {
+        echo "An error occurred in creating routing table\n";
+    } else{
+        //echo "Criou tabela com rota \n";
+        $sql2 = "
+            SELECT *, ST_AsGeoJSON(the_geom) as geojson  FROM dijkstraResult;";
+        $runSQL2 = pg_query($dbcon,$sql2) or die(pg_last_error());
+        if (!$runSQL2) {
+            echo "An error occurred in fetching routing table\n";
+        }/*else{
+            while ($row = pg_fetch_row($runSQL2)) {
+              foreach($row as $i => $attr){
+                echo $attr.", ";
+              }
+              echo ";";
+            }
+        }*/
+        
+    }
+}
+
+
+
 
    // Return route as GeoJSON
    $geojson = array(
