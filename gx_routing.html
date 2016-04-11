@@ -15,7 +15,7 @@
 
 <script type="text/javascript">
     var map, layer, route_layer;
-    var metodo = 1;
+    var metodo = 1; //Mudar com o dropbox
      // global projection objects (uses the proj4js lib)
      var epsg_4326 = new OpenLayers.Projection("EPSG:4326"),
          epsg_900913 = new OpenLayers.Projection("EPSG:900913");
@@ -111,6 +111,11 @@
         //$("input[name=featname]").autocomplete({source:autocomplete});
     }
 
+    function getMethod(input){
+        metodo = input.options[input.selectedIndex].value;
+        console.log(metodo);
+    }
+
     Ext.onReady(function() {
         // create the map panel
         
@@ -182,7 +187,7 @@
         });
 
         // when a point is moved, call the pgrouting function
-drag_points.onComplete = function() {
+        drag_points.onComplete = function() {
             pgrouting(store, points_layer, metodo);
               console.log("vou chamar getData");
               getData(points_layer);
@@ -215,6 +220,11 @@ drag_points.onComplete = function() {
 </head>
 <body>
 <div id="map" class="smallmap"></div>
-<div id="method"></div>
+<div id="methodDiv">
+    <select name="method" onChange="getMethod(this);">
+         <option value="1">A-star</option>
+         <option value="2">Djisktra</option>
+    </select>
+</div>
 </body>
 </html>
